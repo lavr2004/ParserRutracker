@@ -1,3 +1,9 @@
+#specific project folders and files need to be ignored
+bin/settings/config.json
+bin/settings/cookies.json
+bin/settings/logs.txt
+results/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
