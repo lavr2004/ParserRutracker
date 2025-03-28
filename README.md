@@ -12,18 +12,20 @@ A Python tool for parsing forum data from Rutracker.org, storing it in a SQLite 
 - Cookie management via GUI (supports Python dict, JSON, or curl command input).
 
 ## Project Structure
-ParserRutracker/
-├── bin/
-│   ├── gui.py                  # Tkinter-based GUI implementation
-│   ├── rutrackerParser.py      # Parsing logic
-│   ├── rutrackerHtmlGenerator.py # HTML report generation
-│   ├── rutrackerorgCrawler.py  # HTTP request handler
-│   └── settings/
-│       └── settings.py         # Configuration and utility functions
-├── main.py                     # Entry point for CLI and GUI modes
-├── .gitignore
-├── requirements.txt
-└── README.md
+```
+ParserRutracker/  
+├── bin/  
+│   ├── gui.py                  # Tkinter-based GUI implementation  
+│   ├── rutrackerParser.py      # Parsing logic  
+│   ├── rutrackerHtmlGenerator.py # HTML report generation  
+│   ├── rutrackerorgCrawler.py  # HTTP request handler  
+│   └── settings/  
+│       └── settings.py         # Configuration and utility functions  
+├── main.py                     # Entry point for CLI and GUI modes  
+├── .gitignore  
+├── requirements.txt  
+└── README.md  
+```
 
 ## Prerequisites
 - Python 3.6 or higher
