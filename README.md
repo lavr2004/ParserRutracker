@@ -91,6 +91,8 @@ python main.py 2226
 - `settings.py`: Configuration and logging setup.
 
 ## Notes
-Authentication: Cookies are required for authenticated access to Rutracker.org. Keep cookies.json private.
-Threading: Uses daemon threads for parsing to prevent GUI freezing and ensure proper shutdown.
-Output: Generated files are named rutrackerParser_<category_id>.sqlite and rutrackerParser_<category_id>.html.
+**Authentication (OPTIONAL):** Cookies are required for authenticated access to Rutracker.org. Keep cookies.json private.  
+
+**Threading:** Uses daemon threads for parsing to prevent GUI freezing and ensure proper shutdown.  
+
+**Output:** Generated files are named rutrackerParser_<category_id>.sqlite and rutrackerParser_<category_id>.html.  
