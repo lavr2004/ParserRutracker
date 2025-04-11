@@ -3,6 +3,10 @@ import os
 import logging
 import json
 
+import datetime
+
+CURRENT_DATETIME = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
 # Project root directory
 CURRENT_FILE = os.path.abspath(__file__)  # Path to settings.py
 SETTINGS_DIR = os.path.dirname(CURRENT_FILE)  # bin/settings
@@ -59,14 +63,18 @@ def save_cookies(cookies):
     with open(COOKIES_FILE, 'w', encoding='utf-8') as f:
         json.dump(cookies, f)
 
-def get_database_filename(category_id):
-    return f"rutrackerParser_{category_id}.sqlite"
+def get_database_filename(category_id, category_str = None):
+    return f"{CURRENT_DATETIME}_rutrackerParser_{category_id}{'_' + category_str if category_str else ''}.sqlite"
 
 def get_results_html_filename(category_id):
     return f"rutrackerParser_{category_id}.html"
 
-def get_database_path(category_id):
-    return os.path.join(RESULTS_DIR, get_database_filename(category_id))
+def get_database_path(category_id, category_str = None):
+    return os.path.join(RESULTS_DIR, get_database_filename(category_id, category_str))
 
-def get_results_html_filepath(category_id):
+def get_results_html_filepath_by_category_id(category_id):
     return os.path.join(RESULTS_DIR, get_results_html_filename(category_id))
+
+def get_results_html_filepath_by_database_path(database_path):
+    db_name = os.path.basename(database_path)
+    return os.path.join(RESULTS_DIR, db_name.split('.')[0] + ".html")

@@ -22,9 +22,9 @@ def convert_date(date_str):
     except ValueError:
         return None
 
-def setup_database(category_parameter):
-    db_name = get_database_filename(category_parameter)
-    db_path = get_database_path(category_parameter)
+def setup_database(category_parameter, category_str):
+    db_name = get_database_filename(category_parameter, category_str)
+    db_path = get_database_path(category_parameter, category_str)
 
     if os.path.exists(db_path):
         backup_path = os.path.join(BACKUP_DIR, f"backup_{db_name}")
@@ -99,14 +99,33 @@ def extract_page_range(text):
     max_value = max(start_values)
     return list(range(0, max_value + step, step))
 
+def extract_category_title(text):
+    soup = BeautifulSoup(text, 'html.parser')
+    # Ищем <h1 class="maintitle">
+    title_bs = soup.find("h1", attrs={"class": "maintitle"})
+
+    if not title_bs:
+        return "notfounderror"
+
+    # Если текст внутри <a>, ищем его
+    a_tag = title_bs.find("a")
+    if a_tag and a_tag.text:
+        return a_tag.text.strip().replace("/", "-").replace("\\", "-")
+
+    # Если текста в <a> нет, берём текст из <h1>
+    return title_bs.text.strip().replace("/", "-").replace("\\", "-") if title_bs.text else "notfounderror"
+
+
 def run_parser(category_parameter, progress_callback=None):
     from bin.rutrackerorgCrawler import get_response_fc
 
-    conn, cursor, db_path = setup_database(category_parameter)
     cookies = load_cookies()  # Load cookies from file
-
     text = get_response_fc(f=category_parameter, start="0", cookies=cookies)
     page_range = extract_page_range(text)
+    category_str = extract_category_title(text)
+
+    conn, cursor, db_path = setup_database(category_parameter, category_str)
+
     total_pages = len(page_range)
 
     for i, start in enumerate(page_range, 1):

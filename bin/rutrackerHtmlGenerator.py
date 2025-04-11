@@ -1,10 +1,10 @@
 # bin/rutrackerHtmlGenerator.py
 import sqlite3
 import os
-from bin.settings.settings import BASE_DIR, logger, get_database_path, get_results_html_filepath
+from bin.settings.settings import BASE_DIR, logger, get_database_path, get_results_html_filepath_by_database_path
 
-def generate_html(category_parameter):
-    db_path = get_database_path(category_parameter)
+def generate_html(db_path):
+    #db_path = get_database_path(category_parameter)
     logger.info(f"OK - get connection to database {db_path}")
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
@@ -14,7 +14,7 @@ def generate_html(category_parameter):
 
     rows = sorted(rows, key=lambda x: x[8] / (x[4] + x[7]) if (x[4] + x[7]) > 0 else 0, reverse=True)
 
-    html_filepath = get_results_html_filepath(category_parameter)
+    html_filepath = get_results_html_filepath_by_database_path(db_path)
 
     html_content = """<!DOCTYPE html>
 <html>

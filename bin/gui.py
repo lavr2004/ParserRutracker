@@ -1,4 +1,3 @@
-# bin/gui.py
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import re
@@ -9,24 +8,26 @@ import time
 import sys
 from bin.rutrackerParser import run_parser
 from bin.rutrackerHtmlGenerator import generate_html
-from bin.settings.settings import BASE_DIR, logger, load_config, save_config, load_cookies, save_cookies, get_database_path
+from bin.settings.settings import BASE_DIR, logger, load_config, save_config, load_cookies, save_cookies
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("Rutracker Parser")
-        self.root.geometry("500x350")
+        self.root.geometry("500x500")
 
-        # Flag to track program termination
+        # Флаг для отслеживания закрытия приложения
         self.is_closing = False
-        self.parsing_thread = None  # To store the parsing thread reference
+        # Ссылка на поток парсинга
+        self.parsing_thread = None
 
-        # Load last used values
+        # Загрузка последних значений
         self.config = load_config()
         self.default_id = "2226"
         self.default_url = "https://rutracker.org/forum/viewforum.php?f=2226&start=50"
+        self.results_dir = os.path.join(BASE_DIR, "results")
 
-        # Frame for ID input
+        # Frame для ID
         self.id_frame = tk.Frame(root)
         self.id_frame.pack(pady=5)
         self.id_label = tk.Label(self.id_frame, text="Category ID:")
@@ -39,7 +40,7 @@ class App:
         self.id_clear = tk.Button(self.id_frame, text="Clear", command=lambda: self.clear_field(self.id_entry))
         self.id_clear.pack(side=tk.LEFT, padx=5)
 
-        # Frame for URL input
+        # Frame для URL
         self.url_frame = tk.Frame(root)
         self.url_frame.pack(pady=5)
         self.url_label = tk.Label(self.url_frame, text="Forum URL:")
@@ -52,7 +53,7 @@ class App:
         self.url_clear = tk.Button(self.url_frame, text="Clear", command=lambda: self.clear_field(self.url_entry))
         self.url_clear.pack(side=tk.LEFT, padx=5)
 
-        # Buttons frame
+        # Кнопки
         self.button_frame = tk.Frame(root)
         self.button_frame.pack(pady=10)
         self.start_button = tk.Button(self.button_frame, text="Start", command=self.start_parsing)
@@ -63,24 +64,34 @@ class App:
         self.set_cookies_button.pack(side=tk.LEFT, padx=5)
         self.set_cookies_curl_button = tk.Button(self.button_frame, text="Set Cookies via curl", command=self.open_curl_window)
         self.set_cookies_curl_button.pack(side=tk.LEFT, padx=5)
+        self.delete_db_button = tk.Button(self.button_frame, text="Delete Database", command=self.delete_selected_database)
+        self.delete_db_button.pack(side=tk.LEFT, padx=5)
 
-        # Progress bar
+        # Прогресс-бар
         self.progress = ttk.Progressbar(root, orient="horizontal", length=300, mode="determinate")
         self.progress.pack(pady=10)
 
-        # Label for progress information
+        # Метка для информации о прогрессе
         self.progress_info = tk.Label(root, text="Progress: 0/0 requests, ETA: N/A")
         self.progress_info.pack(pady=5)
 
-        # Message display field
+        # Поле для сообщений
         self.message_label = tk.Label(root, text="", foreground="red")
         self.message_label.pack(pady=5)
 
-        # Variables for time calculation
+        # Список баз данных
+        self.db_frame = tk.Frame(root)
+        self.db_frame.pack(pady=10, fill=tk.BOTH, expand=True)
+        tk.Label(self.db_frame, text="Available Databases:").pack()
+        self.db_listbox = tk.Listbox(self.db_frame, height=10)
+        self.db_listbox.pack(fill=tk.BOTH, expand=True)
+        self.update_db_list()
+
+        # Переменные для расчета времени
         self.start_time = None
         self.total_pages = 0
 
-        # Save config on window close
+        # Сохранение конфига при закрытии
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
     def set_placeholder(self, entry, placeholder):
@@ -102,6 +113,37 @@ class App:
         if not category_id and url:
             category_id = self.extract_category_from_url(url)
         return category_id
+
+    def update_db_list(self):
+        if self.is_closing:
+            return
+        self.db_listbox.delete(0, tk.END)
+        if not os.path.exists(self.results_dir):
+            os.makedirs(self.results_dir)
+        for file in os.listdir(self.results_dir):
+            if file.endswith('.sqlite'):
+                self.db_listbox.insert(tk.END, file)
+
+    def delete_selected_database(self):
+        if self.is_closing:
+            return
+        selected = self.db_listbox.curselection()
+        if not selected:
+            self.message_label.config(text="Please select a database to delete")
+            logger.warning("No database selected for deletion")
+            return
+
+        db_name = self.db_listbox.get(selected[0])
+        db_path = os.path.join(self.results_dir, db_name)
+
+        if os.path.exists(db_path):
+            os.remove(db_path)
+            logger.info(f"Deleted database: {db_path}")
+            self.message_label.config(text=f"Deleted {db_name}")
+            self.update_db_list()
+        else:
+            self.message_label.config(text="Database file not found")
+            logger.error(f"Database file not found: {db_path}")
 
     def open_cookies_window(self):
         if self.is_closing:
@@ -222,25 +264,28 @@ class App:
             self.config["last_url"] = self.url_entry.get()
             self.root.after(0, self.enable_start_button)
             self.root.after(0, self.reset_progress_info)
+            self.root.after(0, self.update_db_list)
 
     def generate_html_only(self):
         if self.is_closing:
             return
-        category_id = self.get_category_id()
-        if not category_id:
-            self.message_label.config(text="Please provide a category ID or valid URL")
-            logger.error("No category ID provided or could not extract from URL")
+        selected = self.db_listbox.curselection()
+        if not selected:
+            self.message_label.config(text="Please select a database or run parsing first")
+            logger.warning("No database selected for HTML generation")
             return
 
-        db_path = get_database_path(category_id)
+        db_name = self.db_listbox.get(selected[0])
+        db_path = os.path.join(self.results_dir, db_name)
+
         if not os.path.exists(db_path):
-            self.message_label.config(text="Database not found. Please run Start first!")
-            logger.error(f"Database {db_path} not found for category {category_id}")
+            self.message_label.config(text="Selected database not found")
+            logger.error(f"Database {db_path} not found")
             return
 
         self.message_label.config(text="")
-        logger.info(f"Generating HTML for existing database: {db_path}")
-        generate_html(category_id)
+        logger.info(f"Generating HTML for database: {db_path}")
+        generate_html(db_path)
         logger.info("HTML generation completed")
 
     def update_progress(self, current, total):
@@ -278,22 +323,21 @@ class App:
         self.is_closing = True
         logger.info("Closing application")
 
-        # Save configuration
+        # Сохранение конфигурации
         self.config["last_id"] = self.id_entry.get() if self.id_entry.cget('foreground') != 'grey' else self.default_id
         self.config["last_url"] = self.url_entry.get() if self.url_entry.cget('foreground') != 'grey' else self.default_url
         save_config(self.config)
 
-        # Close all child windows
+        # Закрытие всех дочерних окон
         for window in self.root.winfo_children():
             if isinstance(window, tk.Toplevel):
                 window.destroy()
 
-        # Destroy main window and exit program
+        # Уничтожение главного окна и завершение программы
         self.root.destroy()
-        # Force process termination if threads are still active
         if self.parsing_thread and self.parsing_thread.is_alive():
             logger.warning("Parsing thread still active, forcing shutdown")
-        sys.exit(0)  # Complete program termination
+        sys.exit(0)
 
 root = tk.Tk()
 app = App(root)
