@@ -12,7 +12,11 @@ def generate_html(db_path):
     cursor.execute("SELECT * FROM snippets")
     rows = cursor.fetchall()
 
-    rows = sorted(rows, key=lambda x: x[8] / (x[4] + x[7]) if (x[4] + x[7]) > 0 else 0, reverse=True)
+    #rows = sorted(rows, key=lambda x: x[8] / (x[4] + x[7]) if (x[4] + x[7]) > 0 else 0, reverse=True)
+    downloads_count_index_int = 8
+    replies_count_index_int = 7
+    # rate_sort = downloads_count_index_int * replies_count_index_int
+    rows = sorted(rows, key=lambda x: x[7] * x[8] if (x[7] + x[8]) > 0 else 0, reverse=True)
 
     html_filepath = get_results_html_filepath_by_database_path(db_path)
 
