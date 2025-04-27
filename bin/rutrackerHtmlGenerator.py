@@ -9,14 +9,44 @@ def generate_html(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
+    cursor.execute("SELECT SUM(seeders) FROM snippets;")
+    rows = cursor.fetchall()
+    all_seeders_cumulation = rows[0][0]
+
+    cursor.execute("SELECT SUM(downloads) FROM snippets;")
+    rows = cursor.fetchall()
+    all_downloads_cumulation = rows[0][0]
+
+    cursor.execute("SELECT SUM(replies) FROM snippets;")
+    rows = cursor.fetchall()
+    all_commnents_cumulation = rows[0][0]
+
+    one_comment_weight_to_downloads = int(all_downloads_cumulation / all_commnents_cumulation) + 1
+    one_seeder_weight_to_downloads = int(all_downloads_cumulation / all_seeders_cumulation) + 1
+
     cursor.execute("SELECT * FROM snippets")
     rows = cursor.fetchall()
 
+    #1st version of rate
     #rows = sorted(rows, key=lambda x: x[8] / (x[4] + x[7]) if (x[4] + x[7]) > 0 else 0, reverse=True)
+
+    #2nd advanced version of rate
     downloads_count_index_int = 8
     replies_count_index_int = 7
     # rate_sort = downloads_count_index_int * replies_count_index_int
-    rows = sorted(rows, key=lambda x: x[7] * x[8] if (x[7] + x[8]) > 0 else 0, reverse=True)
+    #rows = sorted(rows, key=lambda x: x[7] * x[8] if (x[7] + x[8]) > 0 else 0, reverse=True)
+
+    #3rd advanced version of rate
+    seeders_count_index_int = 4
+    leechers_count_index_int = 5
+    replies_count_index_int = 7
+    downloads_count_index_int = 8
+    #((seeders * one_seeder_weight_to_downloads) + (leechers + downloads) + (replies * one_comment_weight_to_downloads)) * (leechers + 1)
+    # (((x[4] * one_seeder_weight_to_downloads) + (x[5] + x[8]) + (x[7] * one_comment_weight_to_downloads)) * (x[5] + 1))
+    def count_rate_for_record_fc(x):
+        rate = ((x[4] * one_seeder_weight_to_downloads) + (x[5] + x[8]) + (x[7] * one_comment_weight_to_downloads)) * (x[5] + 1)
+        return rate if rate > 0 else 0
+    rows = sorted(rows, key=lambda x: count_rate_for_record_fc(x), reverse=True)
 
     html_filepath = get_results_html_filepath_by_database_path(db_path)
 
