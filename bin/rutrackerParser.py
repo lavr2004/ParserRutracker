@@ -95,9 +95,12 @@ def extract_page_range(text):
     if not start_values:
         return [0]
 
-    step = start_values[1] - start_values[0] if len(start_values) > 1 else 50
-    max_value = max(start_values)
-    return list(range(0, max_value + step, step))
+    if len(start_values) <= 2:
+        return [0, 50]
+    else:
+        step = start_values[1] - start_values[0]
+        max_value = max(start_values)
+        return list(range(0, max_value + step, step))
 
 def extract_category_title(text):
     soup = BeautifulSoup(text, 'html.parser')
