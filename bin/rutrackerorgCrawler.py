@@ -1,8 +1,9 @@
 # bin/rutrackerorgCrawler.py
 import requests
 from bin.settings.settings import load_cookies, logger
+import time
 
-def get_response_fc(f='2226', start='50', cookies=None):
+def get_response_fc(f='2226', start='50', cookies=None, retries=2, time_pause_seconds = 10, timeout_between_requests_seconds = 20):
     if cookies is None:
         cookies = load_cookies()
 
@@ -30,11 +31,26 @@ def get_response_fc(f='2226', start='50', cookies=None):
         'start': f'{start}',
     }
 
-    response = requests.get('https://rutracker.org/forum/viewforum.php', params=params, cookies=cookies, headers=headers)
-    response.raise_for_status()
+    response = None
 
-    logger.info(f"OK: response status code: {response.status_code}, length: {len(response.text)}")
-    return response.text
+    for attempt in range(0, retries):
+        try:
+            response = requests.get('https://rutracker.org/forum/viewforum.php', params=params, cookies=cookies, headers=headers, timeout=timeout_between_requests_seconds)
+            response.raise_for_status()
+
+            logger.info(f"OK: response status code: {response.status_code}, length: {len(response.text)}")
+        except requests.exceptions.HTTPError as e:
+            logger.warning(f"ER: attempt {attempt} from retries {retries} failed. Exception {e}")
+            if attempt < retries:
+                while time_pause_seconds:
+                    logger.warning(f"ER: technical pause before next request {time_pause_seconds} seconds...")
+                    time_pause_seconds = time_pause_seconds - 1
+                    time.sleep(1)
+
+    if response:
+        return response.text
+    logger.warning(f"ER - impossible to complete request for url: 'https://rutracker.org/forum/viewforum.php' with parameters {params}")
+    return ""
 
 if __name__ == "__main__":
     get_response_fc()
